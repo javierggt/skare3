@@ -51,6 +51,13 @@ SRC_DIR = os.path.abspath(os.path.join(args.build_root, "src"))
 LOG_DIR = os.path.abspath(os.path.join(args.build_root, "logs"))
 os.environ["SKA_TOP_SRC_DIR"] = SRC_DIR
 
+# a hack for getting everything with http basic auth without entering the password many times
+import getpass
+if not 'GIT_USERNAME' in os.environ:
+    os.environ['GIT_USERNAME'] = input('Username:')
+if not 'GIT_PASSWORD' in os.environ:
+    os.environ['GIT_PASSWORD'] = getpass.getpass()
+os.environ['GIT_ASKPASS'] = os.path.join(os.path.dirname(__file__), 'git_pass.py')
 
 def clone_repo(name, tag=None):
     print("  - Cloning or updating source source %s." % name)
@@ -58,7 +65,7 @@ def clone_repo(name, tag=None):
     if not os.path.exists(clone_path):
         metayml = os.path.join(pkg_defs_path, name, "meta.yaml")
         meta = open(metayml).read()
-        has_git = re.search("GIT_DESCRIBE_TAG", meta)
+        has_git = re.search("SKA_PKG_VERSION", meta)
         if not has_git:
             return None
         # It isn't clean yaml at this point, so just extract the string we want after "home:"
@@ -93,11 +100,14 @@ def build_package(name):
     pkg_path = os.path.join(pkg_defs_path, name)
 
     try:
-        version = subprocess.check_output(['python', 'setup.py', '--version'],
+        _ = subprocess.check_output(['python', 'setup.py', '--version'],
                                           cwd = os.path.join( SRC_DIR, name)).decode().strip()
+        version = subprocess.check_output(['python', 'setup.py', '--version'],
+                                          cwd=os.path.join(SRC_DIR, name)).decode().strip()
     except:
         version = ''
     os.environ['SKA_PKG_VERSION'] = version
+    print(f'  - SKA_PKG_VERSION={version}')
 
     cmd_list = ["conda", "build", pkg_path, "--croot",
                 BUILD_DIR, "--no-test", "--old-build-string",
