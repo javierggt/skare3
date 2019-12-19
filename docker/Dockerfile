@@ -1,6 +1,6 @@
 FROM astj/centos5-vault:latest
 
-RUN yum -y install gcc \
+RUN yum -y install gcc gcc-c++ gcc-gfortran \
                    perl \
                    curl \
                    sudo \
@@ -8,23 +8,28 @@ RUN yum -y install gcc \
                    nano \
                    emacs \
                    openssh-server \
-                   openssh-clients
+                   openssh-clients \
+                   mesa-libGL
 
-RUN useradd -ms /bin/bash aca
-RUN echo "aca:aca" | chpasswd && usermod -aG wheel aca && echo "%wheel        ALL=(ALL)       NOPASSWD: ALL" >> /etc/sudoers
 
-USER aca
+RUN useradd -ms /bin/bash ska
+RUN echo "ska:ska" | chpasswd && \
+    usermod -aG wheel ska && \
+    echo "%wheel        ALL=(ALL)       NOPASSWD: ALL" >> /etc/sudoers
+
+USER ska
 ENV PS1=' \u \w>'
-WORKDIR /home/aca
+WORKDIR /home/ska
 
-COPY --chown=aca:aca files/condarc /home/aca/.condarc
-ENV PATH="/home/aca/miniconda3/bin:$PATH"
+COPY --chown=ska:ska files/condarc /home/ska/.condarc
+ENV PATH="/home/ska/miniconda3/bin:$PATH"
 RUN curl -O https://repo.continuum.io/miniconda/Miniconda3-4.3.21-Linux-x86_64.sh && \
     bash Miniconda3-4.3.21-Linux-x86_64.sh -b && \
-    rm Miniconda3-4.3.21-Linux-x86_64.sh && \
-    conda install python=3.6.2 conda=4.3.21 --yes
+    rm Miniconda3-4.3.21-Linux-x86_64.sh
 
-RUN conda install --yes ska3_builder
+
+RUN conda install --yes python=3.6.2 conda=4.3.21 && \
+    conda install --yes ska3_builder
 
 RUN conda install --yes pytables \
                         matplotlib \
@@ -32,7 +37,14 @@ RUN conda install --yes pytables \
                         numexpr \
                         numba
 
-RUN mkdir git && cd git && git clone --single-branch --branch docker https://github.com/sot/skare3.git
+RUN conda create -n ska3-flight && \
+    source activate ska3-flight && \
+    conda install --yes ska3-flight && \
+    source deactivate
+
+RUN git clone --single-branch --branch docker https://github.com/sot/skare3.git
+
+#RUN dbus-uuidgen --ensure=/etc/machine-id
 
 
 ENTRYPOINT ["bash"]
