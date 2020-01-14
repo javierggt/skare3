@@ -9,7 +9,7 @@ echo "GIT_USERNAME: ${GIT_USERNAME}"
 #sudo chown -R ska $workdir
 
 cd /home/ska/skare3
-./ska_builder.py --tag scm_version --force $package
+./ska_builder.py --force $package
 cd /home/ska/skare3/builds/
 mv `find /home/ska/skare3/builds/ -name *tar.bz2` .
 files=`ls *tar.bz2`
