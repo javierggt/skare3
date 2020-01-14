@@ -13,7 +13,7 @@ cd /home/ska/skare3
 
 cp -fr /home/ska/skare3/builds $workdir
 rm $workdir/builds/*/*json*
-files=`ls $workdir/builds/builds`
+files=`ls $workdir/builds`
 
 echo "Built files: $files"
 echo ::set-output name=files::$files
