@@ -10,10 +10,10 @@ echo "GIT_USERNAME: ${GIT_USERNAME}"
 
 cd /home/ska/skare3
 ./ska_builder.py --force $package
-cd /home/ska/skare3/builds/
-mv `find /home/ska/skare3/builds/ -name *tar.bz2` .
-files=`ls *tar.bz2`
 
 cp -fr /home/ska/skare3/builds $workdir
+rm $workdir/builds/*/*json*
+files=`ls $workdir/builds/builds`
+
 echo "Built files: $files"
 echo ::set-output name=files::$files
