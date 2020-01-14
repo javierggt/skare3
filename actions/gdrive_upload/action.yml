@@ -1,0 +1,16 @@
+name: 'Google Drive Upload'
+description: 'Upload files to Google Drive'
+inputs:
+  files:
+    description: 'Files to upload'
+    required: true
+  directory:
+    description: 'Directory where to upload files'
+    required: true
+runs:
+  using: 'docker'
+  image: 'Dockerfile'
+  args:
+    - ${{ inputs.files }}
+    - ${{ inputs.directory }}
+
