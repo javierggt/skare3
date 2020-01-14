@@ -14,6 +14,6 @@ cd /home/ska/skare3/builds/
 mv `find /home/ska/skare3/builds/ -name *tar.bz2` .
 files=`ls *tar.bz2`
 
-mv $files $workdir
+cp -fr /home/ska/skare3/builds $workdir
 echo "Built files: $files"
 echo ::set-output name=files::$files
