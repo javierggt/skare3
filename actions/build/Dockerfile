@@ -32,6 +32,5 @@ RUN conda install -q --yes ska3_builder
 RUN git clone --single-branch --branch master https://github.com/sot/skare3.git
 
 COPY files/build.sh /home/ska/build-pkg.sh
-COPY files/gdrive.py /home/ska/gdrive.py
 
 ENTRYPOINT ["/home/ska/build-pkg.sh"]
