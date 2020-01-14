@@ -19,7 +19,7 @@ ENV PS1=' \u \w>'
 WORKDIR /home/ska
 
 COPY --chown=ska:ska files/condarc /home/ska/.condarc
-COPY --chown=ska:ska git_pass.py /home/ska/git_pass.py
+COPY --chown=ska:ska files/git_pass.py /home/ska/git_pass.py
 ENV GIT_ASKPASS="/home/ska/git_pass.py"
 ENV PATH="/home/ska/miniconda3/bin:$PATH"
 RUN curl -O https://repo.continuum.io/miniconda/Miniconda3-4.3.21-Linux-x86_64.sh && \
@@ -31,10 +31,7 @@ RUN conda install -q --yes ska3_builder
 
 RUN git clone --single-branch --branch scm_version https://github.com/sot/skare3.git
 
-COPY build.sh /home/ska/build-pkg.sh
-COPY gdrive.py /home/ska/gdrive.py
-RUN chmod 755 /home/ska/gdrive.py
-COPY git_pass.py /home/ska/git_pass.py
-RUN chmod 755 /home/ska/git_pass.py
+COPY files/build.sh /home/ska/build-pkg.sh
+COPY files/gdrive.py /home/ska/gdrive.py
 
 ENTRYPOINT ["/home/ska/build-pkg.sh"]
