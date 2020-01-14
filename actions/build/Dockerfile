@@ -18,7 +18,7 @@ USER ska
 ENV PS1=' \u \w>'
 WORKDIR /home/ska
 
-COPY --chown=ska:ska condarc /home/ska/.condarc
+COPY --chown=ska:ska files/condarc /home/ska/.condarc
 COPY --chown=ska:ska git_pass.py /home/ska/git_pass.py
 ENV GIT_ASKPASS="/home/ska/git_pass.py"
 ENV PATH="/home/ska/miniconda3/bin:$PATH"
