@@ -1,6 +1,6 @@
 binstar_upload: false
 channels:
-  - https://cxc.cfa.harvard.edu/mta/ASPECT/ska3-conda-test/dev
-  - https://cxc.cfa.harvard.edu/mta/ASPECT/ska3-conda-test/new-pkg-repo
-  - https://cxc.cfa.harvard.edu/mta/ASPECT/ska3-conda-test/core-pkg-repo
-  - https://cxc.cfa.harvard.edu/mta/ASPECT/ska3-conda-test/current
+  - https://${CONDA_USER_PASSWORD}@cxc.cfa.harvard.edu/mta/ASPECT/ska3-conda-test/dev
+  - https://${CONDA_USER_PASSWORD}@cxc.cfa.harvard.edu/mta/ASPECT/ska3-conda-test/new-pkg-repo
+  - https://${CONDA_USER_PASSWORD}@cxc.cfa.harvard.edu/mta/ASPECT/ska3-conda-test/core-pkg-repo
+  - https://${CONDA_USER_PASSWORD}@cxc.cfa.harvard.edu/mta/ASPECT/ska3-conda-test/current
