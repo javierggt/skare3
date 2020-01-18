@@ -4,3 +4,4 @@ channels:
   - https://ska:${CONDA_PASSWORD}@cxc.cfa.harvard.edu/mta/ASPECT/ska3-conda-test/new-pkg-repo
   - https://ska:${CONDA_PASSWORD}@cxc.cfa.harvard.edu/mta/ASPECT/ska3-conda-test/core-pkg-repo
   - https://ska:${CONDA_PASSWORD}@cxc.cfa.harvard.edu/mta/ASPECT/ska3-conda-test/current
+  - defaults
