@@ -1,44 +1,4 @@
-FROM astj/centos5-vault:latest
+FROM docker.pkg.github.com/sot/skare3/centos5-builder:latest
 
-RUN yum -y install gcc \
-                   perl \
-                   curl \
-                   sudo \
-                   bzip2 \
-                   nano \
-                   emacs \
-                   openssh-server \
-                   openssh-clients
-
-# this user ID matches github's VM user uid.
-RUN useradd -ms /bin/bash ska -u 1001
-RUN echo "ska:ska" | chpasswd && usermod -aG wheel ska && echo "%wheel        ALL=(ALL)       NOPASSWD: ALL" >> /etc/sudoers && echo "Defaults:ska        !requiretty" >> /etc/sudoers
-
-USER ska
-ENV PS1=' \u \w>'
-WORKDIR /home/ska
-
-COPY --chown=ska:ska files/condarc /home/ska/.condarc.in
-COPY --chown=ska:ska files/git_pass.py /home/ska/git_pass.py
-ENV GIT_ASKPASS="/home/ska/git_pass.py"
-ENV PATH="/home/ska/miniconda3/bin:$PATH"
-
-RUN curl -O https://repo.continuum.io/miniconda/Miniconda3-4.3.21-Linux-x86_64.sh && \
-    bash Miniconda3-4.3.21-Linux-x86_64.sh -b && \
-    rm Miniconda3-4.3.21-Linux-x86_64.sh
-
-# CONDA_PASSWORD gets passed as argument
-ARG CONDA_PASSWORD
-# then .condarc is created and removed within one step, otherwise the password can be exposed
-RUN CONDA_PASSWORD=$CONDA_PASSWORD && \
-    sed -e "s/\${CONDA_PASSWORD}/${CONDA_PASSWORD}/g" .condarc.in > .condarc && \
-    conda install python=3.6.2 conda=4.3.21 -q --yes && \
-    conda install -q --yes ska3_builder && \
-    rm .condarc
-
-RUN git clone --single-branch --branch master https://github.com/sot/skare3.git
-
-COPY files/build.sh /home/ska/build-pkg.sh
-
-# ENTRYPOINT ["bash"]
+COPY build.sh /home/ska/build-pkg.sh
 ENTRYPOINT ["/home/ska/build-pkg.sh"]
