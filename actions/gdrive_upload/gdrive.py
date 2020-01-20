@@ -71,8 +71,8 @@ Possible metadata fields:
 
 
 import os
-from apiclient.discovery import build
-from apiclient.errors import UnknownFileType
+from googleapiclient.discovery import build
+from googleapiclient.errors import UnknownFileType
 import mimetypes
 
 
