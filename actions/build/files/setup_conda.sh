@@ -4,7 +4,7 @@ then
     exit 100
 fi
 
-sed -e "s/\${CONDA_PASSWORD}/${CONDA_PASSWORD}/g" ./skare3/actions/build/files/condarc > $HOME/.condarc
+sed -e "s/\${CONDA_PASSWORD}/${CONDA_PASSWORD}/g" ./skare3/docker/centos5-builder/files/condarc.in > $HOME/.condarc
 curl -O https://repo.continuum.io/miniconda/Miniconda3-4.3.21-MacOSX-x86_64.sh
 bash Miniconda3-4.3.21-MacOSX-x86_64.sh -b
 export PATH=${HOME}/miniconda3/bin:$PATH
