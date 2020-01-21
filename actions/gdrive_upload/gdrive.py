@@ -72,7 +72,7 @@ Possible metadata fields:
 
 import os
 from googleapiclient.discovery import build
-from googleapiclient.errors import UnknownFileType
+from googleapiclient.errors import UnknownFileType, HttpError
 import mimetypes
 
 
@@ -86,7 +86,16 @@ if not os.path.exists(os.environ['GOOGLE_APPLICATION_CREDENTIALS']):
 DRIVE = build('drive', 'v3')
 
 
-def get_id(path):
+def get_drive_id(name):
+    drives = [d for d in DRIVE.drives().list().execute()['drives'] if d['name'] == name]
+    if len(drives) > 1:
+        logging.warning(f'There are {len(drives)} with name {name}, returning the first one')
+    if not drives:
+        return None
+    return drives[0]['id']
+
+
+def get_id(path, drive=None):
     """
     Split path and follow the parent-child relations to the end, returning the ID of the last child.
 
@@ -96,14 +105,30 @@ def get_id(path):
     # assert os.path.isabs(path)
     folders = path.split('/')
     folder = folders[0]
-    gfolder = DRIVE.files().list(q=f'name="{folder}"').execute()
+    args = {'q': f'name="{folder}"'}
+    if drive is not None:
+        args.update({
+            'corpora':'drive',
+            'includeItemsFromAllDrives': True,
+            'supportsAllDrives': True,
+            'driveId': get_drive_id(drive)
+        })
+    gfolder = DRIVE.files().list(**args).execute()
     if not gfolder['files']:
         raise Exception(f'"{folder}" folder not found.')
     if len(gfolder['files']) > 1:
         raise Exception(f'More than one {folder} folder found.')
     gfolder = gfolder['files'][0]['id']
     for i, child in enumerate(folders[1:]):
-        gchild = DRIVE.files().list(q=f'"{gfolder}" in parents and name="{child}"').execute()
+        args = {'q': f'"{gfolder}" in parents and name="{child}"'}
+        if drive is not None:
+            args.update({
+                'corpora':'drive',
+                'includeItemsFromAllDrives': True,
+                'supportsAllDrives': True,
+                'driveId': get_drive_id(drive)
+            })
+        gchild = DRIVE.files().list(**args).execute()
         if not gchild['files']:
             raise Exception(f'"{child}" folder not found.')
         if i < len(folders) - 2 and len(gchild['files']) > 1:
@@ -114,7 +139,7 @@ def get_id(path):
 
 
 def ls(path, fields=('id, name, kind, version, mimeType, createdTime'
-                     ', modifiedTime, headRevisionId, owners')):
+                     ', modifiedTime, headRevisionId, owners'), drive=None):
     """
     Get metadata for a given path.
 
@@ -122,7 +147,7 @@ def ls(path, fields=('id, name, kind, version, mimeType, createdTime'
     :param fields: str, a comma-separated list of metadata fields.
     :returns: list of dict
     """
-    folder = get_id(path)
+    folder = get_id(path, drive=drive)
     f = fields
     if 'mimeType' not in f:
         f += ', mimeType'
@@ -135,16 +160,19 @@ def ls(path, fields=('id, name, kind, version, mimeType, createdTime'
     return res
 
 
-def rm(path):
+def rm(path, drive=None):
     """
     Remove file/folder without moving it to the trash (how does one move it to the trash? BTW).
 
     :param path: str
     """
-    DRIVE.files().delete(fileId=get_id(path)).execute()
+    path_id = get_id(path, drive=drive)
+    try:
+        DRIVE.files().delete(fileId=path_id, supportsAllDrives=True).execute()
+    except HttpError as e:
+        raise
 
-
-def upload(filename, path):
+def upload(filename, path, drive=None):
     """
     Upload a file to a given folder in Google Drive.
 
@@ -155,7 +183,7 @@ def upload(filename, path):
     :param path: str. Destination directory.
     """
     metadata = {'name': os.path.basename(filename),
-                'parents': [get_id(path)]}
+                'parents': [get_id(path, drive=drive)]}
     if os.path.isdir(filename):
         metadata['mimeType'] = 'application/vnd.google-apps.folder'
 
@@ -163,7 +191,7 @@ def upload(filename, path):
     return DRIVE.files().create(body=metadata, media_body=media_body, fields='id').execute()
 
 
-def upload_recursive(filename, destination):
+def upload_recursive(filename, destination, drive=None):
     """
     Upload a file to a given folder in Google Drive.
 
@@ -174,7 +202,7 @@ def upload_recursive(filename, destination):
     :param destination: Destination directory.
     :return:
     """
-    parent = get_id(destination)
+    parent = get_id(destination, drive=drive)
     filename = os.path.abspath(filename)
     file_id = {}
 
@@ -195,7 +223,7 @@ def upload_recursive(filename, destination):
                     'parents': [parent]}
         if os.path.isdir(filename):
             metadata['mimeType'] = 'application/vnd.google-apps.folder'
-        file_id = {filename: DRIVE.files().create(body=metadata, fields='id').execute()['id']}
+        file_id = {filename: DRIVE.files().create(body=metadata, supportsAllDrives=True, fields='id').execute()['id']}
 
     # traverse the tree
     for root, d_names, f_names in os.walk(filename,
@@ -237,7 +265,7 @@ def upload_recursive(filename, destination):
                 print(f'{filename} failed to upload (unknown file type)')
 
 
-def download(path, filename=None):
+def download(path, filename=None, drive=None):
     """
     Download a file and save it into a file.
 
@@ -247,7 +275,7 @@ def download(path, filename=None):
     """
     if filename is None:
         filename = os.path.basename(path)
-    link = ls(path, fields='webContentLink')[0]['webContentLink']
+    link = ls(path, fields='webContentLink', drive=drive)[0]['webContentLink']
     res, data = DRIVE._http.request(link)
     with open(filename, 'wb') as out:
         out.write(data)
@@ -259,19 +287,20 @@ if __name__ == '__main__':
     import argparse
     parser = argparse.ArgumentParser()
     parser.add_argument('cmd', choices=actions, nargs='?')
+    parser.add_argument('--drive', default=None)
     args, argv = parser.parse_known_args()
     if args.cmd == 'ls':
         for d in argv:
-            print('\n'.join([f['name'] for f in ls(d)]))
+            print('\n'.join([f['name'] for f in ls(d, drive=args.drive)]))
     elif args.cmd == 'rm':
         for d in argv:
-            rm(d)
+            rm(d, drive=args.drive)
     elif args.cmd == 'upload':
         for file in argv[:-1]:
             if os.path.exists(file):
-                upload_recursive(file, argv[-1])
+                upload_recursive(file, argv[-1], drive=args.drive)
             else:
                 print(f'no such file {file}')
     elif args.cmd == 'download':
         for f in argv:
-            download(f)
+            download(f, drive=args.drive)
