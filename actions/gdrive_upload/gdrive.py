@@ -199,7 +199,7 @@ def upload(filename, path, drive=None):
     return DRIVE.files().create(body=metadata, media_body=media_body, fields='id', supportsAllDrives=True).execute()
 
 
-def upload_recursive(filename, destination, drive=None):
+def upload_recursive(filename, destination, drive=None, force=False):
     """
     Upload a file to a given folder in Google Drive.
 
@@ -233,9 +233,13 @@ def upload_recursive(filename, destination, drive=None):
             # if it is there and is a directory, use this id
             file_id[filename] = files[0]['id']
         else:
-            # if it is there and is a file, remove it
-            for file in files:
-                DRIVE.files().delete(fileId=file['id'], supportsAllDrives=True).execute()
+            if force:
+                # if it is there and is a file, remove it
+                for file in files:
+                    DRIVE.files().delete(fileId=file['id'], supportsAllDrives=True).execute()
+            else:
+                logging.warning(f'File {os.path.basename(filename)} is there, not overwriting.')
+                return
 
     if filename not in file_id:
         metadata = {'name': os.path.basename(filename),
@@ -268,9 +272,14 @@ def upload_recursive(filename, destination, drive=None):
             files = DRIVE.files(). \
                 list(q=f'"{parent}" in parents and name = "{filename}"', **drive_args).execute()['files']
             if files:
-                # if it is, remove it
-                for file in files:
-                    DRIVE.files().delete(fileId=file['id'], supportsAllDrives=True).execute()
+                if force:
+                    # if it is, remove it
+                    for file in files:
+                        DRIVE.files().delete(fileId=file['id'], supportsAllDrives=True).execute()
+                else:
+                    logging.warning(f'File {filename} is there, not overwriting.')
+                    continue
+
             try:
                 # now create it
                 metadata = {'name': filename,
