@@ -71,6 +71,7 @@ Possible metadata fields:
 
 
 import os
+import logging
 from googleapiclient.discovery import build
 from googleapiclient.errors import UnknownFileType, HttpError
 import mimetypes
@@ -312,6 +313,7 @@ def download(path, filename=None, drive=None):
 
 
 if __name__ == '__main__':
+    logging.basicConfig()
     actions = ['ls', 'rm', 'upload', 'download']
     import argparse
     parser = argparse.ArgumentParser()
