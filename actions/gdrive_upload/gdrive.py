@@ -151,12 +151,20 @@ def ls(path, fields=('id, name, kind, version, mimeType, createdTime'
     f = fields
     if 'mimeType' not in f:
         f += ', mimeType'
-    metadata = DRIVE.files().get(fileId=folder, fields=f).execute()
+    metadata = DRIVE.files().get(fileId=folder, fields=f, supportsAllDrives=True).execute()
     if metadata['mimeType'] == 'application/vnd.google-apps.folder':
-        res = DRIVE.files().list(q=f'"{folder}" in parents',
-                                 fields=f'files({fields})').execute()['files']
+        args = {'q': f'"{folder}" in parents',
+                'fields': f'files({fields})'}
+        if drive is not None:
+            args.update({
+                'corpora':'drive',
+                'includeItemsFromAllDrives': True,
+                'supportsAllDrives': True,
+                'driveId': get_drive_id(drive)
+            })
+        res = DRIVE.files().list(**args).execute()['files']
     else:
-        res = [DRIVE.files().get(fileId=folder, fields=fields).execute()]
+        res = [DRIVE.files().get(fileId=folder, fields=fields, supportsAllDrives=True).execute()]
     return res
 
 
@@ -188,7 +196,7 @@ def upload(filename, path, drive=None):
         metadata['mimeType'] = 'application/vnd.google-apps.folder'
 
     media_body = None if os.path.isdir(filename) else filename
-    return DRIVE.files().create(body=metadata, media_body=media_body, fields='id').execute()
+    return DRIVE.files().create(body=metadata, media_body=media_body, fields='id', supportsAllDrives=True).execute()
 
 
 def upload_recursive(filename, destination, drive=None):
@@ -206,9 +214,20 @@ def upload_recursive(filename, destination, drive=None):
     filename = os.path.abspath(filename)
     file_id = {}
 
+    if drive:
+        drive_args = {
+            'corpora':'drive',
+            'includeItemsFromAllDrives': True,
+            'supportsAllDrives': True,
+            'driveId': get_drive_id(drive)
+        }
+    else:
+        drive_args = {}
+
+
     # check if file is there already
     q = f'"{parent}" in parents and name = "{os.path.basename(filename)}"'
-    files = DRIVE.files().list(q=q).execute()['files']
+    files = DRIVE.files().list(q=q, **drive_args).execute()['files']
     if files:
         if files[0]['mimeType'] == 'application/vnd.google-apps.folder':
             # if it is there and is a directory, use this id
@@ -216,7 +235,7 @@ def upload_recursive(filename, destination, drive=None):
         else:
             # if it is there and is a file, remove it
             for file in files:
-                DRIVE.files().delete(fileId=file['id']).execute()
+                DRIVE.files().delete(fileId=file['id'], supportsAllDrives=True).execute()
 
     if filename not in file_id:
         metadata = {'name': os.path.basename(filename),
@@ -233,7 +252,7 @@ def upload_recursive(filename, destination, drive=None):
         for dir in d_names:
             # check if directory is there already
             files = DRIVE.files().\
-                list(q=f'"{parent}" in parents and name = "{dir}"').execute()['files']
+                list(q=f'"{parent}" in parents and name = "{dir}"', **drive_args).execute()['files']
             if files:
                 # if it is, use it
                 file_id[os.path.join(root, dir)] = files[0]['id']
@@ -242,16 +261,16 @@ def upload_recursive(filename, destination, drive=None):
                 metadata = {'name': dir, 'parents': [file_id[root]],
                             'mimeType': 'application/vnd.google-apps.folder'}
                 file_id[os.path.join(root, dir)] = DRIVE.files(). \
-                    create(body=metadata, media_body=None, fields='id').execute()['id']
+                    create(body=metadata, media_body=None, fields='id', supportsAllDrives=True).execute()['id']
 
         for filename in f_names:
             # check if file is there already
             files = DRIVE.files(). \
-                list(q=f'"{parent}" in parents and name = "{filename}"').execute()['files']
+                list(q=f'"{parent}" in parents and name = "{filename}"', **drive_args).execute()['files']
             if files:
                 # if it is, remove it
                 for file in files:
-                    DRIVE.files().delete(fileId=file['id']).execute()
+                    DRIVE.files().delete(fileId=file['id'], supportsAllDrives=True).execute()
             try:
                 # now create it
                 metadata = {'name': filename,
@@ -259,7 +278,8 @@ def upload_recursive(filename, destination, drive=None):
                 file_id[os.path.join(root, filename)] = \
                     DRIVE.files().create(body=metadata,
                                          media_body=os.path.join(root, filename),
-                                         fields='id').execute()
+                                         fields='id',
+                                         supportsAllDrives=True).execute()
             except UnknownFileType as e:
                 # maybe we can be better at determining the type
                 print(f'{filename} failed to upload (unknown file type)')
