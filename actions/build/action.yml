@@ -5,6 +5,9 @@ inputs:
   package:
     description: 'Package to build'
     required: true
+  ref:
+    description: 'git ref to build (branch, tag, commit sha)'
+    required: true
 outputs:
   files:
     description: 'Files produced as result'
@@ -13,4 +16,5 @@ runs:
   image: 'Dockerfile'
   args:
     - ${{ inputs.package }}
+    - --tag=${{ inputs.ref }}
 
